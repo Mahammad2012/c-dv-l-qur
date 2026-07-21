@@ -122,23 +122,54 @@
             </button>
         </div>
 
-        <!-- 3. TƏSDİQLƏNDİ / YÖNLƏNDİRMƏ EKRANI -->
+        <!-- 3. DƏRS CƏDVƏLİ VƏ SAAT SEÇİMİ EKRANI (ƏLAVƏ EDİLDİ) -->
+        <div id="scheduleScreen" class="hidden flex flex-col text-left py-2 space-y-5">
+            <div class="text-center mb-2">
+                <span class="material-symbols-outlined text-[#D0BCFF] text-4xl mb-1">calendar_month</span>
+                <h3 class="text-xl font-bold text-white">Dərs Cədvəlini Seçin</h3>
+                <p class="text-xs text-[#CAC4D0] mt-1">Sizə uyğun günləri və dərsin başlama saatını təyin edin</p>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2">Dərs Günləri</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">event</span>
+                    <select id="daysSelect" onchange="updateTimeOptions()" class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors appearance-none">
+                        <option value="">-- Günləri Seçin --</option>
+                    </select>
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2">Dərs Saatı</label>
+                <div class="relative">
+                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">schedule</span>
+                    <select id="timeSelect" class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors appearance-none">
+                        <option value="">-- Əvvəlcə günü seçin --</option>
+                    </select>
+                </div>
+            </div>
+
+            <button id="submitScheduleBtn" onclick="saveScheduleChoice()" class="w-full py-4 bg-[#D0BCFF] text-[#381E72] font-bold rounded-full transition-all active:scale-95 hover:opacity-90 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#D0BCFF]/10">
+                <span class="material-symbols-outlined">check_circle</span>
+                <span>Cədvəli Təsdiqlə</span>
+            </button>
+        </div>
+
+        <!-- 4. YEKUN TƏBRİK EKRANI -->
         <div id="approvedScreen" class="hidden flex flex-col items-center text-center py-8 space-y-6">
             <div class="w-16 h-16 rounded-full bg-[#27C93F]/20 flex items-center justify-center text-[#27C93F]">
                 <span class="material-symbols-outlined text-4xl">check_circle</span>
             </div>
             <div>
-                <h3 class="text-2xl font-bold text-white">Giriş Təsdiqləndi!</h3>
-                <p class="text-sm text-[#CAC4D0] mt-2 px-4">
-                    Qeydiyyatınız uğurla təsdiqləndi. Bir neçə saniyə ərzində əsas səhifəyə yönləndirilirsiniz...
+                <h3 class="text-2xl font-bold text-white">Qeydiyyat Tamamlandı!</h3>
+                <p id="finalScheduleText" class="text-sm text-[#CAC4D0] mt-3 px-2 leading-relaxed">
+                    Seçdiyiniz günlər və saat qeydə alındı.
                 </p>
-            </div>
-            <div class="w-full bg-[#49454F]/20 h-1 rounded-full overflow-hidden">
-                <div class="bg-[#27C93F] h-full w-full animate-[shrink_3s_linear_forwards] origin-left"></div>
             </div>
         </div>
 
-        <!-- 4. İMTİNA / TAYMAUT EKRANI -->
+        <!-- 5. İMTİNA / TAYMAUT EKRANI -->
         <div id="rejectedScreen" class="hidden flex flex-col items-center text-center py-8 space-y-6">
             <div class="w-16 h-16 rounded-full bg-[#FF3B30]/20 flex items-center justify-center text-[#FF3B30]">
                 <span class="material-symbols-outlined text-4xl">cancel</span>
@@ -160,7 +191,6 @@
     <script>
           // 1. SUPABASE BAZA QOŞULMASI
           const SUPABASE_URL = "https://xxruhthpxxmcnigogreh.supabase.co";
-          // Supabase-dən kopyaladığınız ey... ilə başlayan anon key-i bura yapışdırın:
           const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cnVodGhweHhtY25pZ29ncmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1OTU2NzksImV4cCI6MjEwMDE3MTY3OX0.ace0D6OaDcbmFnw8GHKPAgvBAg7vKa8Sg9HlUbkZrOo"; 
 
           const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -168,6 +198,7 @@
           // Elementlər
           const formScreen = document.getElementById('registrationForm');
           const waitingScreen = document.getElementById('waitingScreen');
+          const scheduleScreen = document.getElementById('scheduleScreen');
           const approvedScreen = document.getElementById('approvedScreen');
           const rejectedScreen = document.getElementById('rejectedScreen');
           const waitName = document.getElementById('waitName');
@@ -175,14 +206,18 @@
           const waitPhone = document.getElementById('waitPhone');
           const countdownText = document.getElementById('countdownText');
           const rejectTitle = document.getElementById('rejectTitle');
+          const daysSelect = document.getElementById('daysSelect');
+          const timeSelect = document.getElementById('timeSelect');
+          const finalScheduleText = document.getElementById('finalScheduleText');
     
           let activeTimer = 30;
           let countdownInterval = null;
           let realtimeChannel = null;
           let currentRequestId = null;
+          let loadedSchedules = [];
 
           function showScreen(screen) {
-            [formScreen, waitingScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
+            [formScreen, waitingScreen, scheduleScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
             screen.classList.remove('hidden');
           }
 
@@ -199,7 +234,6 @@
               status: 'PENDING'
             };
 
-            // Supabase-ə yeni sətir daxil edirik
             const { data, error } = await supabaseClient
               .from('login_requests')
               .insert([studentData])
@@ -207,12 +241,11 @@
 
             if (error) {
                 alert("Xəta baş verdi: " + error.message);
-              return;
+                return;
             }
 
             currentRequestId = data[0].id;
 
-            // Gözləmə ekranını doldururuq
             waitName.textContent = `${studentData.student_name} ${studentData.student_surname}`;
             waitSchoolClass.textContent = `${studentData.school} / ${studentData.class_name}`;
             waitPhone.textContent = studentData.phone;
@@ -220,11 +253,10 @@
             showScreen(waitingScreen);
             startTimer();
 
-            // Realtime canlı dinləməni başladırıq
             listenToStatus(currentRequestId);
           });
 
-          // TƏTBİQDƏN GƏLƏN STATUSU CANLI DİNLƏMƏK
+          // CANLI TƏSDİQ DİNLƏMƏSİ
           function listenToStatus(requestId) {
             realtimeChannel = supabaseClient
               .channel('public:login_requests')
@@ -240,7 +272,8 @@
                   const status = payload.new.status;
                   if (status === 'APPROVED') {
                     stopTimer();
-                    showScreen(approvedScreen);
+                    // Təsdiqləndi -> Gün və Saat seçimi ekranına keçirik
+                    openScheduleSelection();
                   } else if (status === 'REJECTED') {
                     stopTimer();
                     rejectTitle.textContent = "Giriş İmtina Edildi";
@@ -249,6 +282,63 @@
                 }
               )
               .subscribe();
+          }
+
+          // CƏDVƏL MƏLUMATLARINI TƏTBİQDƏN / SUPABASE-DƏN ÇƏKMƏK
+          async function openScheduleSelection() {
+            showScreen(scheduleScreen);
+            fetchScheduleData();
+
+            // Tətbiqdən yeni gün/saat əlavə olunarsa canlı olaraq menyunu yeniləyirik
+            supabaseClient.channel('public:cədvəl_seçimləri')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cədvəl_seçimləri' }, () => {
+                fetchScheduleData();
+            }).subscribe();
+          }
+
+          async function fetchScheduleData() {
+            const { data, error } = await supabaseClient.from('cədvəl_seçimləri').select('*');
+            if (data) {
+                loadedSchedules = data;
+                daysSelect.innerHTML = '<option value="">-- Günləri Seçin --</option>';
+
+                data.forEach(item => {
+                    const opt = document.createElement('option');
+                    opt.value = item.id;
+                    opt.textContent = item.gün_seçimi;
+                    daysSelect.appendChild(opt);
+                });
+            }
+          }
+
+          // GÜN SEÇİLDİKDƏ SAAATLARI DOLDURMAQ
+          function updateTimeOptions() {
+            const selectedId = daysSelect.value;
+            timeSelect.innerHTML = '<option value="">-- Saatı Seçin --</option>';
+
+            const selectedOption = loadedSchedules.find(x => x.id == selectedId);
+            if (selectedOption && selectedOption.vaxt_boşluğu) {
+                selectedOption.vaxt_boşluğu.forEach(time => {
+                    const opt = document.createElement('option');
+                    opt.value = time;
+                    opt.textContent = time;
+                    timeSelect.appendChild(opt);
+                });
+            }
+          }
+
+          // SEÇİLMİŞ CƏDVƏLİ TƏSDİQLƏMƏK
+          function saveScheduleChoice() {
+            if (!daysSelect.value || !timeSelect.value) {
+                alert("Lütfən həm günü, həm də saatı seçin!");
+                return;
+            }
+
+            const dayText = daysSelect.options[daysSelect.selectedIndex].text;
+            const timeText = timeSelect.value;
+
+            finalScheduleText.innerHTML = `Təsdiqlənmiş Dərs Günləri: <b class="text-[#D0BCFF]">${dayText}</b><br>Dərs Saatı: <b class="text-[#D0BCFF]">${timeText}</b>`;
+            showScreen(approvedScreen);
           }
 
           function startTimer() {

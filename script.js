@@ -142,19 +142,19 @@ document.addEventListener('DOMContentLoaded', () => {
         await fetchScheduleData();
 
         // Cədvəllər bazada dəyişərsə canlı yeniləmək üçün kanala abunə oluruq
-        supabaseClient.channel('public:cədvəl_seçimləri')
-            .on('postgres_changes', { event: '*', schema: 'public', table: 'cədvəl_seçimləri' }, () => {
+        supabaseClient.channel('public:schedule_options')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'schedule_options' }, () => {
                 fetchScheduleData();
             })
             .subscribe();
     }
 
     /**
-     * Supabase 'cədvəl_seçimləri' cədvəlindən günləri gətirir
+     * Supabase 'schedule_options' cədvəlindən günləri gətirir
      */
     async function fetchScheduleData() {
         const { data, error } = await supabaseClient
-            .from('cədvəl_seçimləri')
+            .from('schedule_options')
             .select('*');
 
         if (error) {
@@ -167,9 +167,10 @@ document.addEventListener('DOMContentLoaded', () => {
             daysSelect.innerHTML = '<option value="">-- Günləri Seçin --</option>';
 
             data.forEach(item => {
+                const dayText = item.day_option || item.gün_seçimi;
                 const opt = document.createElement('option');
                 opt.value = item.id;
-                opt.textContent = item.gün_seçimi;
+                opt.textContent = dayText;
                 daysSelect.appendChild(opt);
             });
         }
@@ -184,8 +185,9 @@ document.addEventListener('DOMContentLoaded', () => {
             timeSelect.innerHTML = '<option value="">-- Saatı Seçin --</option>';
 
             const selectedOption = loadedSchedules.find(x => x.id == selectedId);
-            if (selectedOption && selectedOption.vaxt_boşluğu) {
-                selectedOption.vaxt_boşluğu.forEach(time => {
+            if (selectedOption) {
+                const times = selectedOption.time_slots || selectedOption.vaxt_boşluğu || [];
+                times.forEach(time => {
                     const opt = document.createElement('option');
                     opt.value = time;
                     opt.textContent = time;
@@ -196,10 +198,10 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     /**
-     * Cədvəl seçimini təsdiqləyib yekun ekrana keçid
+     * Cədvəl seçimini 'student_schedules' cədvəlinə yazmaq və təsdiqləyib yekun ekrana keçid
      */
     if (submitScheduleBtn) {
-        submitScheduleBtn.addEventListener('click', () => {
+        submitScheduleBtn.addEventListener('click', async () => {
             if (!daysSelect.value || !timeSelect.value) {
                 alert("Lütfən həm günü, həm də saatı seçin!");
                 return;
@@ -207,6 +209,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const dayText = daysSelect.options[daysSelect.selectedIndex].text;
             const timeText = timeSelect.value;
+
+            // Düyməni gözləmə rejiminə keçiririk
+            submitScheduleBtn.disabled = true;
+            submitScheduleBtn.textContent = "Yadda saxlanılır...";
+
+            // Şagird məlumatlarını təkrar oxuyub yadda saxlayırıq
+            const studentInfo = {
+                student_name: document.getElementById('studentName').value.trim(),
+                student_surname: document.getElementById('studentSurname').value.trim(),
+                school: document.getElementById('studentSchool').value.trim(),
+                class_name: document.getElementById('studentClass').value.trim(),
+                phone: document.getElementById('studentPhone').value.trim(),
+                selected_day: dayText,
+                selected_time: timeText,
+                request_id: currentRequestId
+            };
+
+            // Supabase 'student_schedules' cədvəlinə əlavə edirik
+            const { error } = await supabaseClient
+                .from('student_schedules')
+                .insert([studentInfo]);
+
+            if (error) {
+                console.error("Cədvəl yadda saxlanılarkən xəta:", error.message);
+                alert("Məlumatı yadda saxlamaq mümkün olmadı: " + error.message);
+                submitScheduleBtn.disabled = false;
+                submitScheduleBtn.textContent = "Cədvəli Təsdiqlə";
+                return;
+            }
 
             if (finalScheduleText) {
                 finalScheduleText.innerHTML = `Təsdiqlənmiş Dərs Günləri: <b class="text-[var(--color-primary)]">${dayText}</b><br>Dərs Saatı: <b class="text-[var(--color-primary)]">${timeText}</b>`;

@@ -1,243 +1,259 @@
 /**
- * KidsGate - Elegant Dark Web Portal Integration Engine
+ * KidsGate - Dark Web Portal Script Engine
  */
 
-// 1. Supabase-ə qoşulma
+// 1. Supabase Konfiqurasiyası və Qoşulma
 const SUPABASE_URL = 'https://xxruhthpxxmcnigogreh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cnVodGhweHhtY25pZ29ncmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1OTU2NzksImV4cCI6MjEwMDE3MTY3OX0.ace0D6OaDcbmFnw8GHKPAgvBAg7vKa8Sg9HlUbkZrOo'; // Kopyaladığınız sb_publishable_... key-i bura yapışdırın
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cnVodGhweHhtY25pZ29ncmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1OTU2NzksImV4cCI6MjEwMDE3MTY3OX0.ace0D6OaDcbmFnw8GHKPAgvBAg7vKa8Sg9HlUbkZrOo';
 
-const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-// 2. Form Göndəriləndə Supabase Bazasına Yazmaq
-document.getElementById('registrationForm').addEventListener('submit', async function (e) {
-    e.preventDefault();
-
-    const studentData = {
-        student_name: document.getElementById('studentName').value,
-        student_surname: document.getElementById('studentSurname').value,
-        school: document.getElementById('studentSchool').value,
-        class_name: document.getElementById('studentClass').value,
-        phone: document.getElementById('studentPhone').value,
-        status: 'PENDING'
-    };
-
-    // Supabase-ə yeni sorğu əlavə edirik
-    const { data, error } = await supabase
-        .from('login_requests')
-        .insert([studentData])
-        .select();
-
-    if (error) {
-        console.error("Xəta baş verdi:", error.message);
-        return;
-    }
-
-    const currentRequestId = data[0].id;
-    showScreen(waitingScreen);
-
-    // Canlı status dəyişikliyini dinləməyə başlayırıq
-    listenToStatusChange(currentRequestId);
-});
-
-// 3. Tətbiq tərəfindən status dəyişəndə (APPROVED / REJECTED) saytı CANLI yeniləmək
-function listenToStatusChange(requestId) {
-    const channel = supabase
-        .channel('public:login_requests')
-        .on(
-            'postgres_changes',
-            {
-                event: 'UPDATE',
-                schema: 'public',
-                table: 'login_requests',
-                filter: `id=eq.${requestId}`
-            },
-            (payload) => {
-                const newStatus = payload.new.status;
-                console.log("Canlı status yeniləndi:", newStatus);
-
-                if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
-                    supabase.removeChannel(channel);
-                    handleStatusChange(newStatus);
-                }
-            }
-        )
-        .subscribe();
-}
+const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 document.addEventListener('DOMContentLoaded', () => {
-    // UI Ekranları
+    // UI Ekran Elementləri
     const formScreen = document.getElementById('registrationForm');
     const waitingScreen = document.getElementById('waitingScreen');
+    const scheduleScreen = document.getElementById('scheduleScreen');
     const approvedScreen = document.getElementById('approvedScreen');
     const rejectedScreen = document.getElementById('rejectedScreen');
 
-    // Dinamik Elementlər
+    // Dinamik Mətn Elementləri
     const waitName = document.getElementById('waitName');
     const waitSchoolClass = document.getElementById('waitSchoolClass');
     const waitPhone = document.getElementById('waitPhone');
     const countdownText = document.getElementById('countdownText');
     const rejectTitle = document.getElementById('rejectTitle');
+    const finalScheduleText = document.getElementById('finalScheduleText');
 
-    // Taymer və dövri sorğu dəyişənləri
+    // Cədvəl Seçim Elementləri
+    const daysSelect = document.getElementById('daysSelect');
+    const timeSelect = document.getElementById('timeSelect');
+    const submitScheduleBtn = document.getElementById('submitScheduleBtn');
+
+    // İdarəetmə Dəyişənləri
     let countdownInterval = null;
-    let activeTimer = 30; // Maksimum gözləmə müddəti (30 saniyə)
-    let mockPollInterval = null;
-
-    // Real-time verilənlər bazası ünvanınız (Firebase REST API mərkəzi)
-    const FIREBASE_DB_URL = "https://kidsgate-default-rtdb.firebaseio.com"; 
+    let activeTimer = 30;
+    let realtimeChannel = null;
+    let currentRequestId = null;
+    let loadedSchedules = [];
 
     /**
-     * Ekranlar arası keçidi təmin edən funksiya
+     * Bütün ekranları gizlədib yalnız seçilmiş ekranı göstərən funksiya
      */
     function showScreen(screen) {
-        formScreen.classList.add('hidden');
-        waitingScreen.classList.add('hidden');
-        approvedScreen.classList.add('hidden');
-        rejectedScreen.classList.add('hidden');
-        screen.classList.remove('hidden');
+        [formScreen, waitingScreen, scheduleScreen, approvedScreen, rejectedScreen].forEach(s => {
+            if (s) s.classList.add('hidden');
+        });
+        if (screen) screen.classList.remove('hidden');
     }
 
     /**
-     * Form təsdiqləndikdə icra olunan məntiq
+     * 1. QEYDİYYAT FORMU GÖNDƏRİLDİKDƏ (Form Submit)
      */
     if (formScreen) {
-        formScreen.addEventListener('submit', function(e) {
+        formScreen.addEventListener('submit', async function (e) {
             e.preventDefault();
-            
-            const student = {
-                ad: document.getElementById('studentName').value.trim(),
-                soyad: document.getElementById('studentSurname').value.trim(),
-                mekteb: document.getElementById('studentSchool').value.trim(),
-                sinif: document.getElementById('studentClass').value.trim(),
-                telefon: document.getElementById('studentPhone').value.trim(),
-                status: "PENDING",
-                timestamp: Date.now()
+
+            const studentData = {
+                student_name: document.getElementById('studentName').value.trim(),
+                student_surname: document.getElementById('studentSurname').value.trim(),
+                school: document.getElementById('studentSchool').value.trim(),
+                class_name: document.getElementById('studentClass').value.trim(),
+                phone: document.getElementById('studentPhone').value.trim(),
+                status: 'PENDING'
             };
 
-            // Gözləmə ekranını tələbənin məlumatları ilə doldururuq
-            waitName.textContent = `${student.ad} ${student.soyad}`;
-            waitSchoolClass.textContent = `${student.mekteb} / ${student.sinif}`;
-            waitPhone.textContent = student.telefon;
+            // Supabase 'login_requests' cədvəlinə məlumat əlavə edirik
+            const { data, error } = await supabaseClient
+                .from('login_requests')
+                .insert([studentData])
+                .select();
 
-            showScreen(waitingScreen);
-            startCountdown(student);
-
-            // Sandboks testləri üçün valideyn pəncərəsinə bildiriş göndəririk
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: "NEW_REGISTRATION",
-                    data: student
-                }, "*");
+            if (error) {
+                console.error("Supabase xətası:", error.message);
+                alert("Sorğu göndərilərkən xəta baş verdi: " + error.message);
+                return;
             }
 
-            // Real verilənlər bazasına sorğu yazmaq üçün (İstəyə bağlı aktivləşdirilə bilər):
-            /*
-            fetch(`${FIREBASE_DB_URL}/active_request.json`, {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(student)
-            });
-            */
-            
-            pollForStatusChange();
+            currentRequestId = data[0].id;
+
+            // Gözləmə ekranındakı məlumatları yeniləyirik
+            waitName.textContent = `${studentData.student_name} ${studentData.student_surname}`;
+            waitSchoolClass.textContent = `${studentData.school} / ${studentData.class_name}`;
+            waitPhone.textContent = studentData.phone;
+
+            showScreen(waitingScreen);
+            startCountdown();
+
+            // Supabase Realtime ilə canlı statusu izləyirik
+            listenToStatusChange(currentRequestId);
         });
     }
 
     /**
-     * Geri sayım taymerini başladan funksiya
+     * 2. CANLI STATUSU İZLƏMƏK (Realtime Subscription)
      */
-    function startCountdown(student) {
-        clearInterval(countdownInterval);
-        activeTimer = 30;
-        countdownText.textContent = `${activeTimer}s`;
+    function listenToStatusChange(requestId) {
+        realtimeChannel = supabaseClient
+            .channel('public:login_requests')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'login_requests',
+                    filter: `id=eq.${requestId}`
+                },
+                (payload) => {
+                    const newStatus = payload.new.status;
+                    console.log("Canlı status yeniləndi:", newStatus);
 
-        countdownInterval = setInterval(() => {
-            activeTimer--;
-            countdownText.textContent = `${activeTimer}s`;
-
-            if (activeTimer <= 0) {
-                clearInterval(countdownInterval);
-                handleStatusChange("TIMEOUT");
-            }
-        }, 1000);
-    }
-
-    /**
-     * Status dəyişikliklərini izləyən dövri sorğu (polling) funksiyası
-     */
-    function pollForStatusChange() {
-        clearInterval(mockPollInterval);
-        mockPollInterval = setInterval(() => {
-            // Real bazada adminin qəbul/imtina cavabını izləmək üçün:
-            /*
-            fetch(`${FIREBASE_DB_URL}/active_request/status.json`)
-                .then(r => r.json())
-                .then(status => {
-                    if (status && status !== "PENDING") {
-                        handleStatusChange(status);
+                    if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
+                        stopTimer();
+                        handleStatusChange(newStatus);
                     }
-                })
-                .catch(err => console.error("Bağlantı xətası: ", err));
-            */
-        }, 1000);
+                }
+            )
+            .subscribe();
     }
 
     /**
-     * Sandboks çərçivəsindən gələn mesajları qəbul etmək
-     */
-    window.addEventListener('message', function(event) {
-        if (event.data && event.data.type === "STATUS_UPDATE") {
-            handleStatusChange(event.data.status);
-        }
-    });
-
-    /**
-     * Qəbul, İmtina və ya Taymaut statusunun idarə olunması
+     * 3. TƏSDİQ, İMTİNA VƏ TAYMAUT STATUSUNUN İDARƏ EDİLMƏSİ
      */
     function handleStatusChange(status) {
-        clearInterval(countdownInterval);
-        clearInterval(mockPollInterval);
+        stopTimer();
 
-        // Bazadakı qeydi təmizləmək üçün (İstəyə bağlı):
-        /*
-        fetch(`${FIREBASE_DB_URL}/active_request.json`, { method: 'DELETE' });
-        */
-
-        if (status === "APPROVED") {
-            showScreen(approvedScreen);
-            
-            // Təsdiqləndikdən 3 saniyə sonra əsas səhifəyə avtomatik yönləndirilir
-            setTimeout(() => {
-                window.location.href = "https://example.com/esas-sehife"; 
-            }, 3000);
-        } else if (status === "REJECTED") {
+        if (status === 'APPROVED') {
+            // Sorğu təsdiqləndi -> Cədvəl seçimi ekranını açırıq
+            openScheduleSelection();
+        } else if (status === 'REJECTED') {
             rejectTitle.textContent = "Giriş İmtina Edildi";
             showScreen(rejectedScreen);
-        } else if (status === "TIMEOUT") {
+        } else if (status === 'TIMEOUT') {
             rejectTitle.textContent = "Taymaut Başa Çatdı";
             showScreen(rejectedScreen);
         }
     }
 
     /**
-     * İstifadəçi ləğv et düyməsinə kliklədikdə
+     * 4. CƏDVƏL SEÇİMİ EKRANINI AÇMAQ VƏ BAZADAN MƏLUMATLARI ÇƏKMƏK
      */
-    const cancelBtn = document.getElementById('cancelRequest');
-    if (cancelBtn) {
-        cancelBtn.addEventListener('click', function() {
-            handleStatusChange("TIMEOUT");
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ type: "CANCEL_REQUEST" }, "*");
+    async function openScheduleSelection() {
+        showScreen(scheduleScreen);
+        await fetchScheduleData();
+
+        // Cədvəllər bazada dəyişərsə canlı yeniləmək üçün kanala abunə oluruq
+        supabaseClient.channel('public:cədvəl_seçimləri')
+            .on('postgres_changes', { event: '*', schema: 'public', table: 'cədvəl_seçimləri' }, () => {
+                fetchScheduleData();
+            })
+            .subscribe();
+    }
+
+    /**
+     * Supabase 'cədvəl_seçimləri' cədvəlindən günləri gətirir
+     */
+    async function fetchScheduleData() {
+        const { data, error } = await supabaseClient
+            .from('cədvəl_seçimləri')
+            .select('*');
+
+        if (error) {
+            console.error("Cədvəl məlumatları alınarkən xəta:", error.message);
+            return;
+        }
+
+        if (data) {
+            loadedSchedules = data;
+            daysSelect.innerHTML = '<option value="">-- Günləri Seçin --</option>';
+
+            data.forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.gün_seçimi;
+                daysSelect.appendChild(opt);
+            });
+        }
+    }
+
+    /**
+     * Gün seçildikdə uyğun dərs saatlarını dolduran funksiya
+     */
+    if (daysSelect) {
+        daysSelect.addEventListener('change', () => {
+            const selectedId = daysSelect.value;
+            timeSelect.innerHTML = '<option value="">-- Saatı Seçin --</option>';
+
+            const selectedOption = loadedSchedules.find(x => x.id == selectedId);
+            if (selectedOption && selectedOption.vaxt_boşluğu) {
+                selectedOption.vaxt_boşluğu.forEach(time => {
+                    const opt = document.createElement('option');
+                    opt.value = time;
+                    opt.textContent = time;
+                    timeSelect.appendChild(opt);
+                });
             }
         });
     }
 
     /**
-     * Yenidən cəhd etmək düyməsi
+     * Cədvəl seçimini təsdiqləyib yekun ekrana keçid
      */
+    if (submitScheduleBtn) {
+        submitScheduleBtn.addEventListener('click', () => {
+            if (!daysSelect.value || !timeSelect.value) {
+                alert("Lütfən həm günü, həm də saatı seçin!");
+                return;
+            }
+
+            const dayText = daysSelect.options[daysSelect.selectedIndex].text;
+            const timeText = timeSelect.value;
+
+            if (finalScheduleText) {
+                finalScheduleText.innerHTML = `Təsdiqlənmiş Dərs Günləri: <b class="text-[var(--color-primary)]">${dayText}</b><br>Dərs Saatı: <b class="text-[var(--color-primary)]">${timeText}</b>`;
+            }
+
+            showScreen(approvedScreen);
+        });
+    }
+
+    /**
+     * 5. TAYMER VƏ LƏĞV ET MƏNTİQİ
+     */
+    function startCountdown() {
+        activeTimer = 30;
+        countdownText.textContent = `${activeTimer}s`;
+        clearInterval(countdownInterval);
+
+        countdownInterval = setInterval(() => {
+            activeTimer--;
+            countdownText.textContent = `${activeTimer}s`;
+
+            if (activeTimer <= 0) {
+                handleStatusChange("TIMEOUT");
+            }
+        }, 1000);
+    }
+
+    function stopTimer() {
+        clearInterval(countdownInterval);
+        if (realtimeChannel) {
+            supabaseClient.removeChannel(realtimeChannel);
+        }
+    }
+
+    // Ləğv et düyməsi
+    const cancelBtn = document.getElementById('cancelRequest');
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', () => {
+            handleStatusChange("TIMEOUT");
+        });
+    }
+
+    // Yenidən cəhd et düyməsi
     const retryBtn = document.getElementById('retryButton');
     if (retryBtn) {
-        retryBtn.addEventListener('click', function() {
+        retryBtn.addEventListener('click', () => {
+            if (formScreen) formScreen.reset();
             showScreen(formScreen);
         });
     }

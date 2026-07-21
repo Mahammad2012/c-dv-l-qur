@@ -2,6 +2,68 @@
  * KidsGate - Elegant Dark Web Portal Integration Engine
  */
 
+// 1. Supabase-ə qoşulma
+const SUPABASE_URL = 'https://xxruhthpxxmcnigogreh.supabase.co';
+const SUPABASE_KEY = 'SİZİN_KOPYALADIĞINIZ_PUBLISHABLE_KEY'; // Kopyaladığınız sb_publishable_... key-i bura yapışdırın
+
+const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+// 2. Form Göndəriləndə Supabase Bazasına Yazmaq
+document.getElementById('registrationForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const studentData = {
+        student_name: document.getElementById('studentName').value,
+        student_surname: document.getElementById('studentSurname').value,
+        school: document.getElementById('studentSchool').value,
+        class_name: document.getElementById('studentClass').value,
+        phone: document.getElementById('studentPhone').value,
+        status: 'PENDING'
+    };
+
+    // Supabase-ə yeni sorğu əlavə edirik
+    const { data, error } = await supabase
+        .from('login_requests')
+        .insert([studentData])
+        .select();
+
+    if (error) {
+        console.error("Xəta baş verdi:", error.message);
+        return;
+    }
+
+    const currentRequestId = data[0].id;
+    showScreen(waitingScreen);
+
+    // Canlı status dəyişikliyini dinləməyə başlayırıq
+    listenToStatusChange(currentRequestId);
+});
+
+// 3. Tətbiq tərəfindən status dəyişəndə (APPROVED / REJECTED) saytı CANLI yeniləmək
+function listenToStatusChange(requestId) {
+    const channel = supabase
+        .channel('public:login_requests')
+        .on(
+            'postgres_changes',
+            {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'login_requests',
+                filter: `id=eq.${requestId}`
+            },
+            (payload) => {
+                const newStatus = payload.new.status;
+                console.log("Canlı status yeniləndi:", newStatus);
+
+                if (newStatus === 'APPROVED' || newStatus === 'REJECTED') {
+                    supabase.removeChannel(channel);
+                    handleStatusChange(newStatus);
+                }
+            }
+        )
+        .subscribe();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // UI Ekranları
     const formScreen = document.getElementById('registrationForm');

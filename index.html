@@ -158,147 +158,131 @@
     </div>
 
     <script>
-        const formScreen = document.getElementById('registrationForm');
-        const waitingScreen = document.getElementById('waitingScreen');
-        const approvedScreen = document.getElementById('approvedScreen');
-        const rejectedScreen = document.getElementById('rejectedScreen');
+          // 1. SUPABASE BAZA QOŞULMASI
+          const SUPABASE_URL = "https://xxruhthpxxmcnigogreh.supabase.co";
+          // Supabase-dən kopyaladığınız ey... ilə başlayan anon key-i bura yapışdırın:
+          const SUPABASE_KEY = "ey..."; 
 
-        const waitName = document.getElementById('waitName');
-        const waitSchoolClass = document.getElementById('waitSchoolClass');
-        const waitPhone = document.getElementById('waitPhone');
-        const countdownText = document.getElementById('countdownText');
-        const rejectTitle = document.getElementById('rejectTitle');
+          const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-        let countdownInterval = null;
-        let activeTimer = 30;
-        let pollInterval = null;
+          // Elementlər
+          const formScreen = document.getElementById('registrationForm');
+          const waitingScreen = document.getElementById('waitingScreen');
+          const approvedScreen = document.getElementById('approvedScreen');
+          const rejectedScreen = document.getElementById('rejectedScreen');
+          const waitName = document.getElementById('waitName');
+          const waitSchoolClass = document.getElementById('waitSchoolClass');
+          const waitPhone = document.getElementById('waitPhone');
+          const countdownText = document.getElementById('countdownText');
+          const rejectTitle = document.getElementById('rejectTitle');
+    
+          let activeTimer = 30;
+          let countdownInterval = null;
+          let realtimeChannel = null;
+          let currentRequestId = null;
 
-        // REAL-TIME INTEGRATION:
-        // Mobil tətbiq və bu veb səhifə arasında real-vaxt sinxronizasiyasını 
-        // təmin etmək üçün Firebase Realtime Database istifadə edə bilərsiniz.
-        // Aşağıdakı url dəyişənini öz real Firebase DB URL-niz ilə əvəzləyin:
-        const FIREBASE_DB_URL = "https://YOUR-FIREBASE-PROJECT.firebaseio.com";
-
-        function showScreen(screen) {
-            formScreen.classList.add('hidden');
-            waitingScreen.classList.add('hidden');
-            approvedScreen.classList.add('hidden');
-            rejectedScreen.classList.add('hidden');
+          function showScreen(screen) {
+            [formScreen, waitingScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
             screen.classList.remove('hidden');
-        }
+          }
 
-        formScreen.addEventListener('submit', function(e) {
+          // FORM GÖNDƏRİLƏNDƏ SUPABASE-Ə YAZMAQ
+          formScreen.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
-            const student = {
-                ad: document.getElementById('studentName').value,
-                soyad: document.getElementById('studentSurname').value,
-                mekteb: document.getElementById('studentSchool').value,
-                sinif: document.getElementById('studentClass').value,
-                telefon: document.getElementById('studentPhone').value,
-                status: "PENDING",
-                timestamp: Date.now()
+
+            const studentData = {
+              student_name: document.getElementById('studentName').value,
+              student_surname: document.getElementById('studentSurname').value,
+              school: document.getElementById('studentSchool').value,
+              class_name: document.getElementById('studentClass').value,
+              phone: document.getElementById('studentPhone').value,
+              status: 'PENDING'
             };
 
-            waitName.textContent = student.ad + " " + student.soyad;
-            waitSchoolClass.textContent = student.mekteb + " / " + student.sinif;
-            waitPhone.textContent = student.telefon;
+            // Supabase-ə yeni sətir daxil edirik
+            const { data, error } = await supabaseClient
+              .from('login_requests')
+              .insert([studentData])
+              .select();
+
+            if (error) {
+                alert("Xəta baş verdi: " + error.message);
+              return;
+            }
+
+            currentRequestId = data[0].id;
+
+            // Gözləmə ekranını doldururuq
+            waitName.textContent = `${studentData.student_name} ${studentData.student_surname}`;
+            waitSchoolClass.textContent = `${studentData.school} / ${studentData.class_name}`;
+            waitPhone.textContent = studentData.phone;
 
             showScreen(waitingScreen);
-            startCountdown(student);
+            startTimer();
 
-            // 1. Firebase-ə yazma (İnteqrasiya üçün aktivləşdirin):
-            /*
-            fetch(`${FIREBASE_DB_URL}/active_request.json`, {
-                method: 'PUT',
-                body: JSON.stringify(student)
-            });
-            */
+            // Realtime canlı dinləməni başladırıq
+            listenToStatus(currentRequestId);
+          });
 
-            // iFrame daxilində sınaq (AI Studio daxilində sınaq üçün):
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({
-                    type: "NEW_REGISTRATION",
-                    data: student
-                }, "*");
-            }
-
-            startPollingStatus();
-        });
-
-        function startCountdown(student) {
-            clearInterval(countdownInterval);
-            activeTimer = 30;
-            countdownText.textContent = activeTimer + "s";
-
-            countdownInterval = setInterval(() => {
-                activeTimer--;
-                countdownText.textContent = activeTimer + "s";
-
-                if (activeTimer <= 0) {
-                    clearInterval(countdownInterval);
-                    handleStatusChange("TIMEOUT");
+          // TƏTBİQDƏN GƏLƏN STATUSU CANLI DİNLƏMƏK
+          function listenToStatus(requestId) {
+            realtimeChannel = supabaseClient
+              .channel('public:login_requests')
+              .on(
+                'postgres_changes',
+                {
+                  event: 'UPDATE',
+                  schema: 'public',
+                  table: 'login_requests',
+                  filter: `id=eq.${requestId}`
+                },
+                (payload) => {
+                  const status = payload.new.status;
+                  if (status === 'APPROVED') {
+                    stopTimer();
+                    showScreen(approvedScreen);
+                  } else if (status === 'REJECTED') {
+                    stopTimer();
+                    rejectTitle.textContent = "Giriş İmtina Edildi";
+                    showScreen(rejectedScreen);
+                  }
                 }
-            }, 1000);
-        }
+              )
+              .subscribe();
+          }
 
-        function startPollingStatus() {
-            clearInterval(pollInterval);
-            pollInterval = setInterval(() => {
-                // 2. Firebase-dən statusun yoxlanılması (İnteqrasiya üçün aktivləşdirin):
-                /*
-                fetch(`${FIREBASE_DB_URL}/active_request/status.json`)
-                .then(r => r.json())
-                .then(status => {
-                    if (status && status !== "PENDING") {
-                        handleStatusChange(status);
-                    }
-                });
-                */
-            }, 1000);
-        }
-
-        // Tətbiqdən iFrame-ə gələn cavab mesajları
-        window.addEventListener('message', function(event) {
-            if (event.data && event.data.type === "STATUS_UPDATE") {
-                handleStatusChange(event.data.status);
-            }
-        });
-
-        function handleStatusChange(status) {
+          function startTimer() {
+            activeTimer = 30;
+            countdownText.textContent = `${activeTimer}s`;
             clearInterval(countdownInterval);
-            clearInterval(pollInterval);
-
-            // 3. Firebase verilənlər bazasını təmizləmək üçün:
-            /*
-            fetch(`${FIREBASE_DB_URL}/active_request.json`, { method: 'DELETE' });
-            */
-
-            if (status === "APPROVED") {
-                showScreen(approvedScreen);
-                setTimeout(() => {
-                    // Təsdiqdən sonra yönləndiriləcək real veb səhifə linkiniz:
-                    window.location.href = "https://your-main-school-website.com/home";
-                }, 3000);
-            } else if (status === "REJECTED") {
-                rejectTitle.textContent = "Giriş İmtina Edildi";
+            countdownInterval = setInterval(() => {
+              activeTimer--;
+              countdownText.textContent = `${activeTimer}s`;
+              if (activeTimer <= 0) {
+                stopTimer();
+                rejectTitle.textContent = "Vaxt Bitdi (Taymaut)";
                 showScreen(rejectedScreen);
-            } else if (status === "TIMEOUT") {
-                rejectTitle.textContent = "Taymaut Başa Çatdı";
-                showScreen(rejectedScreen);
-            }
-        }
+              }
+            }, 1000);
+          }
 
-        document.getElementById('cancelRequest').addEventListener('click', function() {
-            handleStatusChange("TIMEOUT");
-            if (window.parent && window.parent !== window) {
-                window.parent.postMessage({ type: "CANCEL_REQUEST" }, "*");
+          function stopTimer() {
+            clearInterval(countdownInterval);
+            if (realtimeChannel) {
+              supabaseClient.removeChannel(realtimeChannel);
             }
-        });
+          }
 
-        document.getElementById('retryButton').addEventListener('click', function() {
+          document.getElementById('cancelRequest').addEventListener('click', () => {
+            stopTimer();
+            formScreen.reset();
             showScreen(formScreen);
-        });
+          });
+
+          document.getElementById('retryButton').addEventListener('click', () => {
+            formScreen.reset();
+            showScreen(formScreen);
+          });
     </script>
 </body>
 </html>

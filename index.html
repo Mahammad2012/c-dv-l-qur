@@ -4,7 +4,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KidsGate - Giriş Portalı</title>
+    <title>KidsGate - Giriş və Cədvəl Portalı</title>
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Material Symbols Icons -->
@@ -18,87 +18,102 @@
         .gradient-bg {
             background: radial-gradient(circle at top, #1d1b26 0%, #121214 100%);
         }
+        /* İnteraktiv Seçim Düymələrinin Əlavə Animasiyaları */
+        .card-btn {
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .card-btn:hover:not(.full-seats) {
+            transform: translateY(-3px);
+            border-color: #D0BCFF;
+            box-shadow: 0 10px 25px -5px rgba(208, 188, 255, 0.2);
+        }
+        .card-btn.selected {
+            background-color: #381E72 !important;
+            border-color: #D0BCFF !important;
+            box-shadow: 0 0 20px rgba(208, 188, 255, 0.3);
+        }
     </style>
 </head>
-<body class="gradient-bg min-h-screen text-[#E6E1E5] flex items-center justify-center p-4">
+<body class="gradient-bg min-h-screen text-[#E6E1E5] flex flex-col items-center justify-center p-4 relative">
 
     <!-- Sinxronizasiya ID Paneli -->
-    <div class="absolute top-4 right-4 text-xs text-[#CAC4D0] bg-[#2B2930] px-3 py-1.5 rounded-full border border-[#49454F] flex items-center gap-2">
+    <div class="fixed top-4 right-4 text-xs text-[#CAC4D0] bg-[#2B2930] px-3 py-1.5 rounded-full border border-[#49454F] flex items-center gap-2 z-50">
         <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
-        <span>ID: #882-QX • Aktiv</span>
+        <span>ID: #882-QX • Aktiv Portal</span>
     </div>
 
-    <!-- Əsas Giriş Kartı -->
-    <div class="w-full max-w-md bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-8 shadow-2xl transition-all duration-300">
+    <!-- ƏSAS BÜTÜN EKRANI İDARƏ EDƏN KONTEYNER -->
+    <main class="w-full max-w-4xl mx-auto flex items-center justify-center min-h-[90vh]">
         
-        <!-- Logo və Başlıq -->
-        <div class="flex flex-col items-center text-center mb-8">
-            <div class="w-16 h-16 rounded-full bg-[#381E72] flex items-center justify-center mb-4 border border-[#49454F]">
-                <span class="material-symbols-outlined text-[#D0BCFF] text-3xl">vpn_key</span>
+        <!-- 1. QEYDİYYAT FORMU (Məktəb Giriş Portalı) -->
+        <div id="registrationFormCard" class="w-full max-w-md bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-8 shadow-2xl transition-all duration-300">
+            <!-- Logo və Başlıq -->
+            <div class="flex flex-col items-center text-center mb-8">
+                <div class="w-16 h-16 rounded-full bg-[#381E72] flex items-center justify-center mb-4 border border-[#49454F]">
+                    <span class="material-symbols-outlined text-[#D0BCFF] text-3xl">vpn_key</span>
+                </div>
+                <h2 class="text-2xl font-bold text-white tracking-wide">Məktəb Giriş Portalı</h2>
+                <p class="text-sm text-[#CAC4D0] mt-1">Giriş üçün tələbə məlumatlarını daxil edin</p>
             </div>
-            <h2 class="text-2xl font-bold text-white tracking-wide">Məktəb Giriş Portalı</h2>
-            <p class="text-sm text-[#CAC4D0] mt-1">Giriş üçün tələbə məlumatlarını daxil edin</p>
+
+            <form id="registrationForm" class="space-y-5">
+                <div>
+                    <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentName">Adı</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">person</span>
+                        <input type="text" id="studentName" required placeholder="Məsələn: Murad" 
+                            class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentSurname">Soyadı</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">person</span>
+                        <input type="text" id="studentSurname" required placeholder="Məsələn: Əliyev" 
+                            class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentSchool">Məktəb</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">school</span>
+                            <input type="text" id="studentSchool" required placeholder="Bakı Modern M." 
+                                class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentClass">Sinif</label>
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">class</span>
+                            <input type="text" id="studentClass" required placeholder="Məsələn: 6B" 
+                                class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentPhone">Telefon</label>
+                    <div class="relative">
+                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">call</span>
+                        <input type="tel" id="studentPhone" required placeholder="+994 50 123 45 67" 
+                            class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
+                    </div>
+                </div>
+
+                <button type="submit" 
+                    class="w-full py-4 bg-[#D0BCFF] text-[#381E72] font-bold rounded-full transition-all active:scale-95 hover:opacity-90 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#D0BCFF]/10">
+                    <span class="material-symbols-outlined">send</span>
+                    <span>Giriş Sorğusu Göndər</span>
+                </button>
+            </form>
         </div>
 
-        <!-- 1. QEYDİYYAT FORMU -->
-        <form id="registrationForm" class="space-y-5">
-            <div>
-                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentName">Adı</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">person</span>
-                    <input type="text" id="studentName" required placeholder="Məsələn: Murad" 
-                        class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentSurname">Soyadı</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">person</span>
-                    <input type="text" id="studentSurname" required placeholder="Məsələn: Əliyev" 
-                        class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
-                </div>
-            </div>
-
-            <div class="grid grid-cols-2 gap-4">
-                <div>
-                    <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentSchool">Məktəb</label>
-                    <div class="relative">
-                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">school</span>
-                        <input type="text" id="studentSchool" required placeholder="Bakı Modern M." 
-                            class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentClass">Sinif</label>
-                    <div class="relative">
-                        <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">class</span>
-                        <input type="text" id="studentClass" required placeholder="Məsələn: 6B" 
-                            class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
-                    </div>
-                </div>
-            </div>
-
-            <div>
-                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2" for="studentPhone">Telefon</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">call</span>
-                    <input type="tel" id="studentPhone" required placeholder="+994 50 123 45 67" 
-                        class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors placeholder:text-[#938F99]">
-                </div>
-            </div>
-
-            <button type="submit" 
-                class="w-full py-4 bg-[#D0BCFF] text-[#381E72] font-bold rounded-full transition-all active:scale-95 hover:opacity-90 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#D0BCFF]/10">
-                <span class="material-symbols-outlined">send</span>
-                <span>Giriş Sorğusu Göndər</span>
-            </button>
-        </form>
-
         <!-- 2. GÖZLƏMƏ EKRANI -->
-        <div id="waitingScreen" class="hidden flex flex-col items-center text-center py-6 space-y-6">
-            <div class="relative w-24 h-24 flex items-center justify-center">
-                <!-- Radial Countdown -->
+        <div id="waitingScreen" class="hidden w-full max-w-md bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-8 shadow-2xl text-center space-y-6">
+            <div class="relative w-24 h-24 mx-auto flex items-center justify-center">
                 <div class="absolute inset-0 rounded-full border-4 border-[#49454F]"></div>
                 <div class="absolute inset-0 rounded-full border-4 border-t-[#D0BCFF] animate-spin"></div>
                 <span id="countdownText" class="text-2xl font-mono font-bold text-[#D0BCFF]">30s</span>
@@ -112,9 +127,9 @@
             </div>
 
             <div class="w-full bg-[#2B2930] rounded-2xl p-4 border border-[#49454F] space-y-2 text-left text-xs text-[#CAC4D0]">
-                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Ad Soyad:</span><span id="waitName" class="text-white"></span></div>
-                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Məktəb / Sinif:</span><span id="waitSchoolClass" class="text-white"></span></div>
-                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Telefon:</span><span id="waitPhone" class="text-white"></span></div>
+                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Ad Soyad:</span><span id="waitName" class="text-white font-medium"></span></div>
+                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Məktəb / Sinif:</span><span id="waitSchoolClass" class="text-white font-medium"></span></div>
+                <div class="flex justify-between"><span class="font-semibold text-[#D0BCFF]">Telefon:</span><span id="waitPhone" class="text-white font-medium"></span></div>
             </div>
 
             <button id="cancelRequest" class="px-6 py-2 rounded-full border border-[#938F99] text-[#CAC4D0] hover:text-white transition-colors text-sm font-medium active:scale-95">
@@ -122,57 +137,62 @@
             </button>
         </div>
 
-        <!-- 3. DƏRS CƏDVƏLİ VƏ SAAT SEÇİMİ EKRANI (ƏLAVƏ EDİLDİ) -->
-        <div id="scheduleScreen" class="hidden flex flex-col text-left py-2 space-y-5">
-            <div class="text-center mb-2">
-                <span class="material-symbols-outlined text-[#D0BCFF] text-4xl mb-1">calendar_month</span>
-                <h3 class="text-xl font-bold text-white">Dərs Cədvəlini Seçin</h3>
-                <p class="text-xs text-[#CAC4D0] mt-1">Sizə uyğun günləri və dərsin başlama saatını təyin edin</p>
+        <!-- 3. GENİŞ VƏ İNTERAKTİV DƏRS CƏDVƏLİ SEÇİMİ EKRANI (FULL SCREEN GRID) -->
+        <div id="scheduleScreen" class="hidden w-full bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-6 md:p-10 shadow-2xl space-y-8">
+            <div class="text-center">
+                <div class="w-16 h-16 mx-auto rounded-full bg-[#381E72] flex items-center justify-center mb-3 border border-[#49454F]">
+                    <span class="material-symbols-outlined text-[#D0BCFF] text-3xl">calendar_month</span>
+                </div>
+                <h3 class="text-2xl font-bold text-white">Dərs Cədvəlini və İmtahan Seansını Seçin</h3>
+                <p class="text-sm text-[#CAC4D0] mt-1">Geniş düymələrdən istifadə edərək sizə uyğun gün və saatı rahatlıqla seçin</p>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2">Dərs Günləri</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">event</span>
-                    <select id="daysSelect" onchange="updateTimeOptions()" class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors appearance-none">
-                        <option value="">-- Günləri Seçin --</option>
-                    </select>
+            <!-- Adım 1: Gün Seçimi Bölməsi -->
+            <div class="space-y-3">
+                <label class="block text-xs font-bold text-[#D0BCFF] uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">event</span>
+                    1. Dərs Günləri / Qrupunu Seçin
+                </label>
+                <div id="daysGrid" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- JS vasitəsilə bura böyük gün düymələri dinamik gələcək -->
                 </div>
             </div>
 
-            <div>
-                <label class="block text-xs font-semibold text-[#D0BCFF] uppercase tracking-wider mb-2">Dərs Saatı</label>
-                <div class="relative">
-                    <span class="material-symbols-outlined absolute left-3 top-3.5 text-[#CAC4D0] text-xl">schedule</span>
-                    <select id="timeSelect" class="w-full pl-11 pr-4 py-3 bg-[#2B2930] border border-[#49454F] rounded-xl focus:outline-none focus:border-[#D0BCFF] text-white transition-colors appearance-none">
-                        <option value="">-- Əvvəlcə günü seçin --</option>
-                    </select>
+            <!-- Adım 2: Saat və Yer Sayı Seçimi Bölməsi -->
+            <div id="timeSection" class="space-y-3 hidden">
+                <label class="block text-xs font-bold text-[#D0BCFF] uppercase tracking-wider flex items-center gap-2">
+                    <span class="material-symbols-outlined text-base">schedule</span>
+                    2. Uyğun Saatı Və Seansı Seçin (Boş Yer Sayı)
+                </label>
+                <div id="timesGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                    <!-- JS vasitəsilə bura böyük saat və kontingent düymələri dinamik gələcək -->
                 </div>
             </div>
 
-            <button id="submitScheduleBtn" onclick="saveScheduleChoice()" class="w-full py-4 bg-[#D0BCFF] text-[#381E72] font-bold rounded-full transition-all active:scale-95 hover:opacity-90 flex items-center justify-center gap-2 mt-4 shadow-lg shadow-[#D0BCFF]/10">
+            <button id="submitScheduleBtn" onclick="saveScheduleChoice()" disabled
+                class="w-full py-4 bg-[#D0BCFF] text-[#381E72] font-bold rounded-full transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg shadow-[#D0BCFF]/10 opacity-50 cursor-not-allowed">
                 <span class="material-symbols-outlined">check_circle</span>
                 <span>Cədvəli Təsdiqlə</span>
             </button>
         </div>
 
         <!-- 4. YEKUN TƏBRİK EKRANI -->
-        <div id="approvedScreen" class="hidden flex flex-col items-center text-center py-8 space-y-6">
-            <div class="w-16 h-16 rounded-full bg-[#27C93F]/20 flex items-center justify-center text-[#27C93F]">
-                <span class="material-symbols-outlined text-4xl">check_circle</span>
+        <div id="approvedScreen" class="hidden w-full max-w-md bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-8 shadow-2xl text-center space-y-6">
+            <div class="w-20 h-20 rounded-full bg-[#27C93F]/20 flex items-center justify-center text-[#27C93F] mx-auto border border-[#27C93F]/30">
+                <span class="material-symbols-outlined text-5xl">check_circle</span>
             </div>
             <div>
                 <h3 class="text-2xl font-bold text-white">Qeydiyyat Tamamlandı!</h3>
-                <p id="finalScheduleText" class="text-sm text-[#CAC4D0] mt-3 px-2 leading-relaxed">
+                <p id="finalScheduleText" class="text-sm text-[#CAC4D0] mt-3 px-2 leading-relaxed bg-[#2B2930] p-4 rounded-xl border border-[#49454F]">
                     Seçdiyiniz günlər və saat qeydə alındı.
                 </p>
             </div>
         </div>
 
         <!-- 5. İMTİNA / TAYMAUT EKRANI -->
-        <div id="rejectedScreen" class="hidden flex flex-col items-center text-center py-8 space-y-6">
-            <div class="w-16 h-16 rounded-full bg-[#FF3B30]/20 flex items-center justify-center text-[#FF3B30]">
-                <span class="material-symbols-outlined text-4xl">cancel</span>
+        <div id="rejectedScreen" class="hidden w-full max-w-md bg-[#1C1B1F] border border-[#49454F] rounded-[32px] p-8 shadow-2xl text-center space-y-6">
+            <div class="w-20 h-20 rounded-full bg-[#FF3B30]/20 flex items-center justify-center text-[#FF3B30] mx-auto border border-[#FF3B30]/30">
+                <span class="material-symbols-outlined text-5xl">cancel</span>
             </div>
             <div>
                 <h3 class="text-xl font-bold text-white" id="rejectTitle">Sorğu Ləğv Edildi</h3>
@@ -186,58 +206,68 @@
             </button>
         </div>
 
-    </div>
+    </main>
 
+    <!-- JS MƏNTİQİ -->
     <script>
-          // 1. SUPABASE BAZA QOŞULMASI
-          const SUPABASE_URL = "https://xxruhthpxxmcnigogreh.supabase.co";
-          const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cnVodGhweHhtY25pZ29ncmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1OTU2NzksImV4cCI6MjEwMDE3MTY3OX0.ace0D6OaDcbmFnw8GHKPAgvBAg7vKa8Sg9HlUbkZrOo"; 
+        // 1. SUPABASE BAZA QOŞULMASI
+        const SUPABASE_URL = "https://xxruhthpxxmcnigogreh.supabase.co";
+        const SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh4cnVodGhweHhtY25pZ29ncmVoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODQ1OTU2NzksImV4cCI6MjEwMDE3MTY3OX0.ace0D6OaDcbmFnw8GHKPAgvBAg7vKa8Sg9HlUbkZrOo"; 
 
-          const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-          // Elementlər
-          const formScreen = document.getElementById('registrationForm');
-          const waitingScreen = document.getElementById('waitingScreen');
-          const scheduleScreen = document.getElementById('scheduleScreen');
-          const approvedScreen = document.getElementById('approvedScreen');
-          const rejectedScreen = document.getElementById('rejectedScreen');
-          const waitName = document.getElementById('waitName');
-          const waitSchoolClass = document.getElementById('waitSchoolClass');
-          const waitPhone = document.getElementById('waitPhone');
-          const countdownText = document.getElementById('countdownText');
-          const rejectTitle = document.getElementById('rejectTitle');
-          const daysSelect = document.getElementById('daysSelect');
-          const timeSelect = document.getElementById('timeSelect');
-          const finalScheduleText = document.getElementById('finalScheduleText');
-    
-          let activeTimer = 30;
-          let countdownInterval = null;
-          let realtimeChannel = null;
-          let currentRequestId = null;
-          let loadedSchedules = [];
+        // Elementlərin İdentifikasiyası
+        const registrationFormCard = document.getElementById('registrationFormCard');
+        const formScreen = document.getElementById('registrationForm');
+        const waitingScreen = document.getElementById('waitingScreen');
+        const scheduleScreen = document.getElementById('scheduleScreen');
+        const approvedScreen = document.getElementById('approvedScreen');
+        const rejectedScreen = document.getElementById('rejectedScreen');
 
-          function showScreen(screen) {
-            [formScreen, waitingScreen, scheduleScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
+        const waitName = document.getElementById('waitName');
+        const waitSchoolClass = document.getElementById('waitSchoolClass');
+        const waitPhone = document.getElementById('waitPhone');
+        const countdownText = document.getElementById('countdownText');
+        const rejectTitle = document.getElementById('rejectTitle');
+
+        const daysGrid = document.getElementById('daysGrid');
+        const timeSection = document.getElementById('timeSection');
+        const timesGrid = document.getElementById('timesGrid');
+        const submitScheduleBtn = document.getElementById('submitScheduleBtn');
+        const finalScheduleText = document.getElementById('finalScheduleText');
+
+        let activeTimer = 30;
+        let countdownInterval = null;
+        let realtimeChannel = null;
+        let currentRequestId = null;
+        
+        let loadedSchedules = [];
+        let selectedDayText = "";
+        let selectedTimeText = "";
+
+        // Ekranlar Arası Keçid Funksiyası
+        function showScreen(screen) {
+            [registrationFormCard, waitingScreen, scheduleScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
             screen.classList.remove('hidden');
-          }
+        }
 
-          // FORM GÖNDƏRİLƏNDƏ SUPABASE-Ə YAZMAQ
-          formScreen.addEventListener('submit', async function(e) {
+        // FORM GÖNDƏRİLƏNDƏ SUPABASE-Ə YAZMAQ
+        formScreen.addEventListener('submit', async function(e) {
             e.preventDefault();
 
             const studentData = {
-              student_name: document.getElementById('studentName').value,
-              student_surname: document.getElementById('studentSurname').value,
-              school: document.getElementById('studentSchool').value,
-              class_name: document.getElementById('studentClass').value,
-              phone: document.getElementById('studentPhone').value,
-              status: 'PENDING'
+                student_name: document.getElementById('studentName').value,
+                student_surname: document.getElementById('studentSurname').value,
+                school: document.getElementById('studentSchool').value,
+                class_name: document.getElementById('studentClass').value,
+                phone: document.getElementById('studentPhone').value,
+                status: 'PENDING'
             };
 
             const { data, error } = await supabaseClient
-              .from('login_requests')
-              .insert([studentData])
-              .select();
+                .from('login_requests')
+                .insert([studentData])
+                .select();
 
             if (error) {
                 alert("Xəta baş verdi: " + error.message);
@@ -254,125 +284,191 @@
             startTimer();
 
             listenToStatus(currentRequestId);
-          });
+        });
 
-          // CANLI TƏSDİQ DİNLƏMƏSİ
-          function listenToStatus(requestId) {
+        // CANLI TƏSDİQ DİNLƏMƏSİ
+        function listenToStatus(requestId) {
             realtimeChannel = supabaseClient
-              .channel('public:login_requests')
-              .on(
-                'postgres_changes',
-                {
-                  event: 'UPDATE',
-                  schema: 'public',
-                  table: 'login_requests',
-                  filter: `id=eq.${requestId}`
-                },
-                (payload) => {
-                  const status = payload.new.status;
-                  if (status === 'APPROVED') {
-                    stopTimer();
-                    // Təsdiqləndi -> Gün və Saat seçimi ekranına keçirik
-                    openScheduleSelection();
-                  } else if (status === 'REJECTED') {
-                    stopTimer();
-                    rejectTitle.textContent = "Giriş İmtina Edildi";
-                    showScreen(rejectedScreen);
-                  }
-                }
-              )
-              .subscribe();
-          }
+                .channel('public:login_requests')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: 'UPDATE',
+                        schema: 'public',
+                        table: 'login_requests',
+                        filter: `id=eq.${requestId}`
+                    },
+                    (payload) => {
+                        const status = payload.new.status;
+                        if (status === 'APPROVED') {
+                            stopTimer();
+                            openScheduleSelection();
+                        } else if (status === 'REJECTED') {
+                            stopTimer();
+                            rejectTitle.textContent = "Giriş İmtina Edildi";
+                            showScreen(rejectedScreen);
+                        }
+                    }
+                )
+                .subscribe();
+        }
 
-          // CƏDVƏL MƏLUMATLARINI TƏTBİQDƏN / SUPABASE-DƏN ÇƏKMƏK
-          async function openScheduleSelection() {
+        // CƏDVƏL EKRANINA KEÇİD VƏ BAZADAN MƏLUMATLARIN ÇƏKİLMƏSİ
+        async function openScheduleSelection() {
             showScreen(scheduleScreen);
             fetchScheduleData();
 
-            // Tətbiqdən yeni gün/saat əlavə olunarsa canlı olaraq menyunu yeniləyirik
+            // Baza yeniləndikdə canlı yeniləmə
             supabaseClient.channel('public:cədvəl_seçimləri')
             .on('postgres_changes', { event: '*', schema: 'public', table: 'cədvəl_seçimləri' }, () => {
                 fetchScheduleData();
             }).subscribe();
-          }
+        }
 
-          async function fetchScheduleData() {
+        async function fetchScheduleData() {
             const { data, error } = await supabaseClient.from('cədvəl_seçimləri').select('*');
             if (data) {
                 loadedSchedules = data;
-                daysSelect.innerHTML = '<option value="">-- Günləri Seçin --</option>';
-
-                data.forEach(item => {
-                    const opt = document.createElement('option');
-                    opt.value = item.id;
-                    opt.textContent = item.gün_seçimi;
-                    daysSelect.appendChild(opt);
-                });
+                renderDaysButtons();
             }
-          }
+        }
 
-          // GÜN SEÇİLDİKDƏ SAAATLARI DOLDURMAQ
-          function updateTimeOptions() {
-            const selectedId = daysSelect.value;
-            timeSelect.innerHTML = '<option value="">-- Saatı Seçin --</option>';
+        // 1. GENİŞ GÜN DÜYMƏLƏRİNİN RENDER EDİLMƏSİ
+        function renderDaysButtons() {
+            daysGrid.innerHTML = '';
+            timeSection.classList.add('hidden');
+            disableSubmitBtn();
 
-            const selectedOption = loadedSchedules.find(x => x.id == selectedId);
-            if (selectedOption && selectedOption.vaxt_boşluğu) {
-                selectedOption.vaxt_boşluğu.forEach(time => {
-                    const opt = document.createElement('option');
-                    opt.value = time;
-                    opt.textContent = time;
-                    timeSelect.appendChild(opt);
+            loadedSchedules.forEach(item => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'card-btn w-full p-5 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-2 text-left cursor-pointer';
+                
+                btn.innerHTML = `
+                    <div class="flex items-center justify-between w-full">
+                        <span class="text-base font-bold text-white">${item.gün_seçimi}</span>
+                        <span class="material-symbols-outlined text-[#D0BCFF]">chevron_right</span>
+                    </div>
+                    <span class="text-xs text-[#CAC4D0] flex items-center gap-1">
+                        <span class="material-symbols-outlined text-sm text-green-400">event_available</span>
+                        Mövcud seansları gör
+                    </span>
+                `;
+
+                btn.addEventListener('click', () => {
+                    document.querySelectorAll('#daysGrid .card-btn').forEach(b => b.classList.remove('selected'));
+                    btn.classList.add('selected');
+                    selectedDayText = item.gün_seçimi;
+                    renderTimeButtons(item);
                 });
-            }
-          }
 
-          // SEÇİLMİŞ CƏDVƏLİ TƏSDİQLƏMƏK
-          function saveScheduleChoice() {
-            if (!daysSelect.value || !timeSelect.value) {
+                daysGrid.appendChild(btn);
+            });
+        }
+
+        // 2. GENİŞ SAAT VƏ BOŞ YER SAYI (KONTİNGENT) DÜYMƏLƏRİNİN RENDER EDİLMƏSİ
+        function renderTimeButtons(selectedSchedule) {
+            timesGrid.innerHTML = '';
+            timeSection.classList.remove('hidden');
+            disableSubmitBtn();
+
+            const times = selectedSchedule.vaxt_boşluğu || [];
+
+            times.forEach((time, index) => {
+                // Əgər bazada 'qalan_yerler' massivi varsa oradan alır, yoxdursa avtomatik nümunəvi yer sayı təyin edir
+                const remainingSeats = selectedSchedule.qalan_yerler ? selectedSchedule.qalan_yerler[index] : (8 - index * 3);
+
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                
+                if (remainingSeats <= 0) {
+                    btn.className = 'card-btn full-seats w-full p-4 bg-[#2B2930]/50 border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-1 opacity-50 cursor-not-allowed';
+                    btn.innerHTML = `
+                        <span class="text-base font-bold text-white">${time}</span>
+                        <span class="text-xs px-2 py-0.5 rounded bg-red-500/20 text-red-400 border border-red-500/30 flex items-center gap-1">
+                            <span class="material-symbols-outlined text-xs">block</span> Yer Dolub
+                        </span>
+                    `;
+                } else {
+                    btn.className = 'card-btn w-full p-4 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-1 cursor-pointer';
+                    btn.innerHTML = `
+                        <span class="text-base font-bold text-white">${time}</span>
+                        <span class="text-xs px-2 py-0.5 rounded bg-green-500/20 text-green-400 border border-green-500/30 flex items-center gap-1 font-semibold">
+                            <span class="material-symbols-outlined text-xs">group</span> Boş yer: ${remainingSeats} nəfər
+                        </span>
+                    `;
+
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#timesGrid .card-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        selectedTimeText = time;
+                        enableSubmitBtn();
+                    });
+                }
+
+                timesGrid.appendChild(btn);
+            });
+        }
+
+        function enableSubmitBtn() {
+            submitScheduleBtn.disabled = false;
+            submitScheduleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            submitScheduleBtn.classList.add('hover:opacity-90');
+        }
+
+        function disableSubmitBtn() {
+            submitScheduleBtn.disabled = true;
+            submitScheduleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitScheduleBtn.classList.remove('hover:opacity-90');
+        }
+
+        // SEÇİLMİŞ CƏDVƏLİ TƏSDİQLƏMƏK
+        function saveScheduleChoice() {
+            if (!selectedDayText || !selectedTimeText) {
                 alert("Lütfən həm günü, həm də saatı seçin!");
                 return;
             }
 
-            const dayText = daysSelect.options[daysSelect.selectedIndex].text;
-            const timeText = timeSelect.value;
-
-            finalScheduleText.innerHTML = `Təsdiqlənmiş Dərs Günləri: <b class="text-[#D0BCFF]">${dayText}</b><br>Dərs Saatı: <b class="text-[#D0BCFF]">${timeText}</b>`;
+            finalScheduleText.innerHTML = `
+                Təsdiqlənmiş Dərs Günləri: <b class="text-[#D0BCFF]">${selectedDayText}</b><br>
+                Dərs Saatı: <b class="text-[#D0BCFF]">${selectedTimeText}</b>
+            `;
             showScreen(approvedScreen);
-          }
+        }
 
-          function startTimer() {
+        // TAYMER MƏNTİQİ
+        function startTimer() {
             activeTimer = 30;
             countdownText.textContent = `${activeTimer}s`;
             clearInterval(countdownInterval);
             countdownInterval = setInterval(() => {
-              activeTimer--;
-              countdownText.textContent = `${activeTimer}s`;
-              if (activeTimer <= 0) {
-                stopTimer();
-                rejectTitle.textContent = "Vaxt Bitdi (Taymaut)";
-                showScreen(rejectedScreen);
-              }
+                activeTimer--;
+                countdownText.textContent = `${activeTimer}s`;
+                if (activeTimer <= 0) {
+                    stopTimer();
+                    rejectTitle.textContent = "Vaxt Bitdi (Taymaut)";
+                    showScreen(rejectedScreen);
+                }
             }, 1000);
-          }
+        }
 
-          function stopTimer() {
+        function stopTimer() {
             clearInterval(countdownInterval);
             if (realtimeChannel) {
-              supabaseClient.removeChannel(realtimeChannel);
+                supabaseClient.removeChannel(realtimeChannel);
             }
-          }
+        }
 
-          document.getElementById('cancelRequest').addEventListener('click', () => {
+        document.getElementById('cancelRequest').addEventListener('click', () => {
             stopTimer();
             formScreen.reset();
-            showScreen(formScreen);
-          });
+            showScreen(registrationFormCard);
+        });
 
-          document.getElementById('retryButton').addEventListener('click', () => {
+        document.getElementById('retryButton').addEventListener('click', () => {
             formScreen.reset();
-            showScreen(formScreen);
-          });
+            showScreen(registrationFormCard);
+        });
     </script>
 </body>
 </html>

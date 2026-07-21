@@ -1,0 +1,40 @@
+/* KidsGate - Elegant Dark Web Portal Stylesheet */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+
+:root {
+    --color-background: #121214;
+    --color-surface-bg: #1C1B1F;
+    --color-surface-card: #2B2930;
+    --color-primary: #D0BCFF;
+    --color-on-primary: #381E72;
+    --color-text-main: #E6E1E5;
+    --color-text-muted: #CAC4D0;
+    --color-outline: #49454F;
+    --color-accent-green: #27C93F;
+    --color-accent-red: #FF3B30;
+}
+
+body {
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    background-color: var(--color-background);
+    margin: 0;
+    padding: 0;
+}
+
+.gradient-bg {
+    background: radial-gradient(circle at top, #1d1b26 0%, #121214 100%);
+}
+
+/* Geri sayım animasiyası */
+@keyframes shrink {
+    from {
+        width: 100%;
+    }
+    to {
+        width: 0%;
+    }
+}
+
+.shrink-animation {
+    animation: shrink 3s linear forwards;
+}

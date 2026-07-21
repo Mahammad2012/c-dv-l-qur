@@ -238,6 +238,9 @@
         let selectedDayText = "";
         let selectedTimeText = "";
 
+        // Form daxilində yazılan şagird məlumatlarını müvəqqəti saxlamaq üçün obyekt
+        let currentStudentData = null;
+
         function showScreen(screen) {
             [registrationFormCard, waitingScreen, scheduleScreen, approvedScreen, rejectedScreen].forEach(s => s.classList.add('hidden'));
             screen.classList.remove('hidden');
@@ -246,18 +249,18 @@
         formScreen.addEventListener('submit', async function(e) {
             e.preventDefault();
 
-            const studentData = {
-                student_name: document.getElementById('studentName').value,
-                student_surname: document.getElementById('studentSurname').value,
-                school: document.getElementById('studentSchool').value,
-                class_name: document.getElementById('studentClass').value,
-                phone: document.getElementById('studentPhone').value,
+            currentStudentData = {
+                student_name: document.getElementById('studentName').value.trim(),
+                student_surname: document.getElementById('studentSurname').value.trim(),
+                school: document.getElementById('studentSchool').value.trim(),
+                class_name: document.getElementById('studentClass').value.trim(),
+                phone: document.getElementById('studentPhone').value.trim(),
                 status: 'PENDING'
             };
 
             const { data, error } = await supabaseClient
                 .from('login_requests')
-                .insert([studentData])
+                .insert([currentStudentData])
                 .select();
 
             if (error) {
@@ -267,9 +270,9 @@
 
             currentRequestId = data[0].id;
 
-            waitName.textContent = `${studentData.student_name} ${studentData.student_surname}`;
-            waitSchoolClass.textContent = `${studentData.school} / ${studentData.class_name}`;
-            waitPhone.textContent = studentData.phone;
+            waitName.textContent = `${currentStudentData.student_name} ${currentStudentData.student_surname}`;
+            waitSchoolClass.textContent = `${currentStudentData.school} / ${currentStudentData.class_name}`;
+            waitPhone.textContent = currentStudentData.phone;
 
             showScreen(waitingScreen);
             startTimer();
@@ -313,7 +316,6 @@
             }).subscribe();
         }
 
-        // BAZADAN MƏLUMATLARIN DOĞRU CƏDVƏLDƏN YÜKLƏNMƏSİ
         async function fetchScheduleData() {
             const { data, error } = await supabaseClient.from('schedule_options').select('*');
             if (data) {
@@ -332,7 +334,6 @@
                 btn.type = 'button';
                 btn.className = 'card-btn w-full p-5 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-2 text-left cursor-pointer';
                 
-                // Supabase-dəki "day_option" sütunundan istifadə olunur
                 btn.innerHTML = `
                     <div class="flex items-center justify-between w-full">
                         <span class="text-base font-bold text-white">${item.day_option}</span>
@@ -360,10 +361,9 @@
             timeSection.classList.remove('hidden');
             disableSubmitBtn();
 
-            // Supabase-dəki "time_slots" sütunundan istifadə olunur
             const times = selectedSchedule.time_slots || [];
 
-            times.forEach((time, index) => {
+            times.forEach((time) => {
                 const btn = document.createElement('button');
                 btn.type = 'button';
                 btn.className = 'card-btn w-full p-4 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-1 cursor-pointer';
@@ -397,9 +397,40 @@
             submitScheduleBtn.classList.remove('hover:opacity-90');
         }
 
-        function saveScheduleChoice() {
+        // CƏDVƏL SEÇİMİNİ 'student_schedules' CƏDVƏLİNƏ YAZAN VƏ YEKUN EKRANA KEÇƏN FUNKSİYA
+        async function saveScheduleChoice() {
             if (!selectedDayText || !selectedTimeText) {
                 alert("Lütfən həm günü, həm də saatı seçin!");
+                return;
+            }
+
+            // Düymə təkrar sıxılmasın deyə bloklayırıq
+            submitScheduleBtn.disabled = true;
+            submitScheduleBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitScheduleBtn.innerText = "Yadda saxlanılır...";
+
+            // Supabase 'student_schedules' cədvəlinə məlumat əlavə edirik
+            const scheduleRecord = {
+                student_name: currentStudentData ? currentStudentData.student_name : '',
+                student_surname: currentStudentData ? currentStudentData.student_surname : '',
+                school: currentStudentData ? currentStudentData.school : '',
+                class_name: currentStudentData ? currentStudentData.class_name : '',
+                phone: currentStudentData ? currentStudentData.phone : '',
+                selected_day: selectedDayText,
+                selected_time: selectedTimeText,
+                request_id: currentRequestId
+            };
+
+            const { error } = await supabaseClient
+                .from('student_schedules')
+                .insert([scheduleRecord]);
+
+            if (error) {
+                console.error("Cədvəl saxlanılarkən xəta:", error.message);
+                alert("Məlumat bazaya yazılarkən xəta baş verdi: " + error.message);
+                submitScheduleBtn.disabled = false;
+                submitScheduleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                submitScheduleBtn.innerText = "Cədvəli Təsdiqlə";
                 return;
             }
 

@@ -17,6 +17,7 @@
 body {
     font-family: 'Plus Jakarta Sans', sans-serif;
     background-color: var(--color-background);
+    color: var(--color-text-main);
     margin: 0;
     padding: 0;
 }
@@ -24,6 +25,61 @@ body {
 .gradient-bg {
     background: radial-gradient(circle at top, #1d1b26 0%, #121214 100%);
 }
+
+/* ==========================================
+   TƏSDİQDƏN SONRAKI CƏDVƏL EKRANI STİLLƏRİ
+   ========================================== */
+
+/* Cədvəl Seçim Formunun Elementləri */
+#scheduleScreen select {
+    background-color: var(--color-surface-card);
+    border: 1px solid var(--color-outline);
+    color: var(--color-text-main);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23CAC4D0' viewBox='0 0 24 24'%3E%3Cpath d='M7 10l5 5 5-5z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1.5em;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+#scheduleScreen select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(208, 188, 255, 0.2);
+}
+
+#scheduleScreen select option {
+    background-color: var(--color-surface-bg);
+    color: var(--color-text-main);
+    padding: 10px;
+}
+
+/* Dərs Cədvəli Düyməsi */
+#submitScheduleBtn {
+    background-color: var(--color-primary);
+    color: var(--color-on-primary);
+    transition: all 0.2s ease;
+}
+
+#submitScheduleBtn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(208, 188, 255, 0.25);
+}
+
+#submitScheduleBtn:active {
+    transform: scale(0.98);
+}
+
+/* Yekun Təbrik Ekranında Uğur animasiyası */
+#approvedScreen .shrink-animation {
+    animation: shrink 3s linear forwards;
+}
+
+/* ==========================================
+   ANİMASİYALAR
+   ========================================== */
 
 /* Geri sayım animasiyası */
 @keyframes shrink {

@@ -31,6 +31,11 @@
             border-color: #D0BCFF !important;
             box-shadow: 0 0 20px rgba(208, 188, 255, 0.3);
         }
+        .card-btn.full-seats {
+            opacity: 0.5;
+            cursor: not-allowed !important;
+            border-color: #FF3B30 !important;
+        }
     </style>
 </head>
 <body class="gradient-bg min-h-screen text-[#E6E1E5] flex flex-col items-center justify-center p-4 relative">
@@ -235,10 +240,10 @@
         let currentRequestId = null;
         
         let loadedSchedules = [];
+        let selectedScheduleItem = null;
         let selectedDayText = "";
         let selectedTimeText = "";
 
-        // Form daxilində yazılan şagird məlumatlarını müvəqqəti saxlamaq üçün obyekt
         let currentStudentData = null;
 
         function showScreen(screen) {
@@ -330,27 +335,46 @@
             disableSubmitBtn();
 
             loadedSchedules.forEach(item => {
+                const maxSeats = item.max_seats || 30;
+                const bookedSeats = item.booked_seats || 0;
+                const remainingSeats = maxSeats - bookedSeats;
+
                 const btn = document.createElement('button');
                 btn.type = 'button';
-                btn.className = 'card-btn w-full p-5 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-2 text-left cursor-pointer';
                 
-                btn.innerHTML = `
-                    <div class="flex items-center justify-between w-full">
-                        <span class="text-base font-bold text-white">${item.day_option}</span>
-                        <span class="material-symbols-outlined text-[#D0BCFF]">chevron_right</span>
-                    </div>
-                    <span class="text-xs text-[#CAC4D0] flex items-center gap-1">
-                        <span class="material-symbols-outlined text-sm text-green-400">event_available</span>
-                        Mövcud seanslar
-                    </span>
-                `;
+                if (remainingSeats <= 0) {
+                    btn.className = 'card-btn full-seats w-full p-5 bg-[#2B2930] border-2 border-[#FF3B30] rounded-2xl flex flex-col items-start gap-2 text-left';
+                    btn.innerHTML = `
+                        <div class="flex items-center justify-between w-full">
+                            <span class="text-base font-bold text-white">${item.day_option}</span>
+                            <span class="text-xs bg-[#FF3B30]/20 text-[#FF3B30] px-2 py-1 rounded font-semibold">Yer Yoxdur</span>
+                        </div>
+                        <span class="text-xs text-[#FF3B30] flex items-center gap-1 font-medium">
+                            <span class="material-symbols-outlined text-sm">block</span>
+                            Bütün yerlər dolub (0/${maxSeats})
+                        </span>
+                    `;
+                } else {
+                    btn.className = 'card-btn w-full p-5 bg-[#2B2930] border-2 border-[#49454F] rounded-2xl flex flex-col items-start gap-2 text-left cursor-pointer';
+                    btn.innerHTML = `
+                        <div class="flex items-center justify-between w-full">
+                            <span class="text-base font-bold text-white">${item.day_option}</span>
+                            <span class="material-symbols-outlined text-[#D0BCFF]">chevron_right</span>
+                        </div>
+                        <span class="text-xs text-[#CAC4D0] flex items-center gap-1">
+                            <span class="material-symbols-outlined text-sm text-green-400">event_available</span>
+                            Qalan yer: <b class="text-green-400 font-bold">${remainingSeats}</b> / ${maxSeats}
+                        </span>
+                    `;
 
-                btn.addEventListener('click', () => {
-                    document.querySelectorAll('#daysGrid .card-btn').forEach(b => b.classList.remove('selected'));
-                    btn.classList.add('selected');
-                    selectedDayText = item.day_option;
-                    renderTimeButtons(item);
-                });
+                    btn.addEventListener('click', () => {
+                        document.querySelectorAll('#daysGrid .card-btn').forEach(b => b.classList.remove('selected'));
+                        btn.classList.add('selected');
+                        selectedScheduleItem = item;
+                        selectedDayText = item.day_option;
+                        renderTimeButtons(item);
+                    });
+                }
 
                 daysGrid.appendChild(btn);
             });
@@ -397,19 +421,17 @@
             submitScheduleBtn.classList.remove('hover:opacity-90');
         }
 
-        // CƏDVƏL SEÇİMİNİ 'student_schedules' CƏDVƏLİNƏ YAZAN VƏ YEKUN EKRANA KEÇƏN FUNKSİYA
         async function saveScheduleChoice() {
-            if (!selectedDayText || !selectedTimeText) {
+            if (!selectedDayText || !selectedTimeText || !selectedScheduleItem) {
                 alert("Lütfən həm günü, həm də saatı seçin!");
                 return;
             }
 
-            // Düymə təkrar sıxılmasın deyə bloklayırıq
             submitScheduleBtn.disabled = true;
             submitScheduleBtn.classList.add('opacity-50', 'cursor-not-allowed');
             submitScheduleBtn.innerText = "Yadda saxlanılır...";
 
-            // Supabase 'student_schedules' cədvəlinə məlumat əlavə edirik
+            // 1. Məlumatı student_schedules cədvəlinə yazırıq
             const scheduleRecord = {
                 student_name: currentStudentData ? currentStudentData.student_name : '',
                 student_surname: currentStudentData ? currentStudentData.student_surname : '',
@@ -421,18 +443,26 @@
                 request_id: currentRequestId
             };
 
-            const { error } = await supabaseClient
+            const { error: insertError } = await supabaseClient
                 .from('student_schedules')
                 .insert([scheduleRecord]);
 
-            if (error) {
-                console.error("Cədvəl saxlanılarkən xəta:", error.message);
-                alert("Məlumat bazaya yazılarkən xəta baş verdi: " + error.message);
+            if (insertError) {
+                console.error("Cədvəl saxlanılarkən xəta:", insertError.message);
+                alert("Məlumat bazaya yazılarkən xəta baş verdi: " + insertError.message);
                 submitScheduleBtn.disabled = false;
                 submitScheduleBtn.classList.remove('opacity-50', 'cursor-not-allowed');
                 submitScheduleBtn.innerText = "Cədvəli Təsdiqlə";
                 return;
             }
+
+            // 2. Qalan yer sayını 1 vahid azaldırıq (booked_seats + 1 edirik)
+            const newBookedCount = (selectedScheduleItem.booked_seats || 0) + 1;
+            
+            await supabaseClient
+                .from('schedule_options')
+                .update({ booked_seats: newBookedCount })
+                .eq('id', selectedScheduleItem.id);
 
             finalScheduleText.innerHTML = `
                 Təsdiqlənmiş Dərs Günləri: <b class="text-[#D0BCFF]">${selectedDayText}</b><br>
